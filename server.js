@@ -12,6 +12,10 @@ const userSocketIds = {};
 
 const users = [];
 
+app.get('/', (req, res)=>{
+    res.send("Server running");
+});
+
 // run when client connects
 io.on('connection', socket => {
     console.log(socket.id + ' connected');
