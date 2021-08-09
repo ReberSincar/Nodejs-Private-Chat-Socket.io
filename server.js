@@ -9,34 +9,27 @@ const server = http.createServer(app);
 
 const io = socketio(server);
 
-const userSocketIds = {};
-
 const users = [];
 
-app.get('/', (req, res)=>{
+app.get('/', (req, res) => {
     res.send("Server running");
 });
 
 // run when client connects
 io.on('connection', socket => {
-    console.log(socket.id + ' connected');
     const user = JSON.parse(socket.request.headers['user']);
-    userSocketIds[user.id] = socket.id;
+    console.log(user.id + ' connected');
+    socket.userId = user.id;
+    socket.join(user.id);
     users.push(user);
     io.emit('users', users);
 
     socket.on('newMessage', message => {
-        const socketId = userSocketIds[message['receiver_id']];
-        console.log(socketId);
-        io.to(socketId).emit('newMessage', message);
+        io.to(message['receiver_id']).emit('newMessage', message);
     });
 
     socket.on('disconnect', () => {
-        console.log('a user disconnected');
-        const userId = Object.keys(userSocketIds).find(key => userSocketIds[key] === socket.id);
-        delete userSocketIds[userId];
-
-        const index = users.findIndex(user => user.id == userId);
+        const index = users.findIndex(user => user.id == socket.userId);
         if (index !== -1)
             users.splice(index, 1);
         io.emit('users', users);
