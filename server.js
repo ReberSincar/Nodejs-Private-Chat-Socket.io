@@ -9,30 +9,46 @@ const server = http.createServer(app);
 
 const io = socketio(server);
 
-const users = [];
-
 app.get('/', (req, res) => {
     res.send("Server running");
 });
 
 // run when client connects
 io.on('connection', socket => {
-    const user = JSON.parse(socket.request.headers['user']);
-    console.log(user.id + ' connected');
-    socket.userId = user.id;
-    socket.join(user.id);
-    users.push(user);
-    io.emit('users', users);
+
+    console.log(socket.id + ' connected');
+
+    socket.on('connectUser', user => {
+        // const user = JSON.parse(data);
+        console.log(user.id + ' join');
+        socket.userId = user.id;
+        socket.userName = user.userName;
+        socket.userSurname = user.userSurname;
+        socket.join(user.id);
+
+        const users = [];
+        const socketIds = Object.keys(io.engine.clients);
+        for (let index = 0; index < socketIds.length; index++) {
+            const element = socketIds[index];
+            const iterableSocket = io.sockets.connected[element];
+            users.push({
+                socketId: iterableSocket.id,
+                userId: iterableSocket.userId,
+                userName: iterableSocket.userName,
+                userSurname: iterableSocket.userSurname,
+            });
+        }
+
+        socket.emit('users', users);
+    });
 
     socket.on('newMessage', message => {
         io.to(message['receiver_id']).emit('newMessage', message);
     });
 
     socket.on('disconnect', () => {
-        const index = users.findIndex(user => user.id == socket.userId);
-        if (index !== -1)
-            users.splice(index, 1);
-        io.emit('users', users);
+        console.log(socket.userId + ' disconnected');
+        io.emit('userDisconnect', socket.userId);
     });
 });
 
